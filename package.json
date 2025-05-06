@@ -10,7 +10,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@titaniumnetwork-dev/ultraviolet": "^1.4.0",
+    "@titaniumnetwork-dev/ultraviolet": "github:Titaniumnetwork/ultraviolet",
     "express": "^4.18.2",
     "@tomphttp/bare-server-node": "^1.0.1"
   }
