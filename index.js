@@ -6,7 +6,7 @@ const PORT      = process.env.PORT || 3000;
 const app = express();
 
 // Corrosion‑Proxy mit Base64‑Codec und WebSocket‑Support
-const proxy = Corrosion({
+const proxy = new Corrosion({
   prefix: '/proxy/',
   codec: 'base64',
   stripCSP: true,
