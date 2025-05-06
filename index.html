@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Edu Recherche</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <h1>Wissenschaftliches Rechercheportal</h1>
+    <form id="proxyForm">
+        <input type="text" id="urlInput" placeholder="https://example.com" required>
+        <button type="submit">Laden</button>
+    </form>
+    <iframe id="proxyFrame" style="width:100%; height:80vh; border:none;"></iframe>
+
+    <script>
+        document.getElementById('proxyForm').addEventListener('submit', e => {
+            e.preventDefault();
+            const url = encodeURIComponent(document.getElementById('urlInput').value);
+            document.getElementById('proxyFrame').src = `/assets/loader?q=${url}`;
+        });
+    </script>
+</body>
+</html>

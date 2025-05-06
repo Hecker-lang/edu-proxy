@@ -1,0 +1,27 @@
+body {
+    font-family: sans-serif;
+    background: #f4f4f4;
+    color: #333;
+    padding: 20px;
+}
+h1 {
+    color: #2a4a9c;
+}
+input, button {
+    padding: 10px;
+    font-size: 1em;
+}
+input {
+    width: 60%;
+    margin-right: 10px;
+}
+button {
+    background: #2a4a9c;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+iframe {
+    margin-top: 20px;
+    border: 1px solid #ccc;
+}
