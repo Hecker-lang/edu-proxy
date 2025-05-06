@@ -1,20 +1,20 @@
 # Verwende ein offizielles Node.js-Image
-FROM node:16
+FROM node:14
 
 # Setze das Arbeitsverzeichnis im Container
 WORKDIR /app
 
-# Kopiere package.json und package-lock.json in das Arbeitsverzeichnis
+# Kopiere die package.json und package-lock.json (falls vorhanden)
 COPY package.json package-lock.json ./
 
-# Installiere die Abhängigkeiten
-RUN npm install
+# Installiere alle Abhängigkeiten ohne Cache
+RUN npm install --no-cache
 
-# Kopiere den Rest des Codes
+# Kopiere den restlichen Code in den Container
 COPY . .
 
-# Exponiere den Port, auf dem die App läuft
+# Öffne Port 3000 für die Anwendung (falls nötig)
 EXPOSE 3000
 
-# Definiere den Befehl, der beim Starten des Containers ausgeführt wird
-CMD ["npm", "start"]
+# Starte die Anwendung (ersetze server.js durch deine Startdatei)
+CMD ["node", "server.js"]
