@@ -10,28 +10,24 @@ const proxy = new Corrosion({
   requestOptions: { jar: true, followRedirect: true, maxRedirects: 10 }
 });
 
-// Logging aller Anfragen
+// Logging
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} ${req.method} ${req.originalUrl}`);
   next();
 });
 
-// Proxy über Query‑Parameter: /proxy?url=<Ziel‑URL>
+// Proxy-Route über Query‑Param
 app.get('/proxy', (req, res) => {
-  let target = req.query.url;
-  if (!target) {
-    return res.status(400).send('Bitte URL angeben, z. B.: /proxy?url=https://example.com');
-  }
-  // Protokoll automatisch ergänzen, falls fehlt
+  let target = req.query.url || 'http://heckergames.rf.gd';
   if (!/^https?:\/\//i.test(target)) {
     target = 'http://' + target;
   }
-  // req.url auf die Ziel‑URL umbiegen
+  // setze req.url auf target
   req.url = target;
   proxy.request(req, res);
 });
 
-// Landing‑Page mit Fullscreen‑Button, Spinner und Favicon
+// Landing‑Page: Auto‑Load + Fullscreen + Spinner
 app.get('/', (req, res) => {
   res.send(`<!DOCTYPE html>
 <html lang="de">
@@ -39,71 +35,71 @@ app.get('/', (req, res) => {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Game‑Proxy</title>
-  <!-- SVG‑Favicon 🎮 -->
+  <!-- Favicon 🎮 -->
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ctext y='14' font-size='16'%3E%F0%9F%8E%AE%3C/text%3E%3C/svg%3E">
   <!-- Bootstrap 5 -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
-        rel="stylesheet"
-        integrity="sha384-ENjdO4Dr2bkBIFxQpeoEcBH7P3QjK7Sk+6Al6z9ZxkK/AdUQvQWZ5y5y5XtF1MZh"
-        crossorigin="anonymous">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-ENjdO4Dr2bkBIFxQpeoEcBH7P3QjK7Sk+6Al6z9ZxkK/AdUQvQWZ5y5y5XtF1MZh" crossorigin="anonymous">
   <style>
-    body { display:flex;flex-direction:column;min-height:100vh;margin:0; }
-    header,footer { background:#343a40;color:#fff;padding:1rem;text-align:center; }
-    main { flex:1;padding:1rem; }
-    #gameFrame { display:none;width:100%;height:100%;border:none; }
-    #spinner { display:none;margin:1rem auto;text-align:center; }
-    .fullscreen-container { position:relative;width:100%;height:75vh; }
+    body, html { height:100%; margin:0; }
+    body { display:flex; flex-direction:column; }
+    header, footer { background:#343a40; color:#fff; text-align:center; padding:1rem; }
+    main { flex:1; display:flex; align-items:center; justify-content:center; position:relative; }
+    .spinner-container {
+      position:absolute; top:50%; left:50%;
+      transform:translate(-50%,-50%);
+    }
+    .loader {
+      width:3rem; height:3rem;
+      border:0.5rem solid #ccc;
+      border-top-color:#007bff;
+      border-radius:50%;
+      animation:spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #gameFrame {
+      width:100%; height:100%;
+      border:none; display:none;
+    }
+    .fullscreen { width:100vw; height:100vh; border:none; }
   </style>
 </head>
 <body>
   <header>
-    <h1 class="h3">🎮 Game‑Proxy</h1>
-    <p class="mb-0">Spiele deine Lieblings‑Games direkt hier.</p>
+    <h1 class="h4 mb-0">🎮 Game‑Proxy</h1>
   </header>
-  <main class="container">
-    <form id="proxyForm" class="row g-2 align-items-center mb-3">
-      <div class="col-sm-10">
-        <input type="url" id="targetUrl" class="form-control"
-               placeholder="https://example.com/dein-game" required>
-      </div>
-      <div class="col-sm-2 d-grid">
-        <button type="submit" class="btn btn-primary">Spiel & Vollbild</button>
-      </div>
-    </form>
-    <div id="spinner">
-      <div class="spinner-border" role="status"><span class="visually-hidden">Lädt…</span></div>
+  <main>
+    <div class="spinner-container" id="spinner">
+      <div class="loader"></div>
     </div>
-    <div class="fullscreen-container">
-      <iframe id="gameFrame" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
-    </div>
+    <iframe id="gameFrame" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
   </main>
   <footer>
-    <small>© Game‑Proxy • öffentlich zugänglich</small>
+    <small>© Game‑Proxy • automatisch weitergeleitet zu heckergames.rf.gd</small>
   </footer>
   <script>
-    const form    = document.getElementById('proxyForm');
-    const frame   = document.getElementById('gameFrame');
-    const spinner = document.getElementById('spinner');
-
-    form.addEventListener('submit', async e => {
-      e.preventDefault();
-      // Fullscreen starten
+    (async () => {
+      // Fullscreen‑Modus
       await document.documentElement.requestFullscreen().catch(()=>{});
+      const spinner = document.getElementById('spinner');
+      const frame   = document.getElementById('gameFrame');
+      // Lade‑Animation zeigen
       spinner.style.display = 'block';
-      frame.style.display   = 'none';
-      let url = document.getElementById('targetUrl').value;
-      frame.src = '/proxy?url=' + encodeURIComponent(url);
-    });
-
-    frame.addEventListener('load', () => {
-      spinner.style.display = 'none';
-      frame.style.display   = 'block';
-    });
-
-    frame.addEventListener('error', () => {
-      spinner.style.display = 'none';
-      alert('Fehler beim Laden. Bitte URL prüfen.');
-    });
+      // Proxy‑URL für heckergames
+      const target = 'http://heckergames.rf.gd';
+      frame.src = '/proxy?url=' + encodeURIComponent(target);
+      // Wenn geladen, Spinner verstecken & Frame anzeigen
+      frame.addEventListener('load', () => {
+        spinner.style.display = 'none';
+        frame.style.display   = 'block';
+        frame.classList.add('fullscreen');
+      });
+      // Bei Fehlern
+      frame.addEventListener('error', () => {
+        spinner.style.display = 'none';
+        alert('Fehler beim Laden der Seite.');
+      });
+    })();
   </script>
 </body>
 </html>`);
@@ -121,10 +117,8 @@ app.use((err, req, res, next) => {
 // HTTP‑Server + WebSocket‑Upgrade
 const server = http.createServer(app);
 server.on('upgrade', (req, socket, head) => {
-  // Proxy‑in‑Proxy: Query‑Param auslesen
   const urlObj = new URL(req.url, `http://${req.headers.host}`);
-  let target = urlObj.searchParams.get('url');
-  if (!target) return socket.destroy();
+  let target = urlObj.searchParams.get('url') || 'http://heckergames.rf.gd';
   if (!/^https?:\/\//i.test(target)) target = 'http://' + target;
   req.url = target;
   proxy.upgrade(req, socket, head);
