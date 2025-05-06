@@ -1,68 +1,42 @@
 const express = require('express');
-const http = require('http');
-const Corrosion = require('@titaniumnetwork-dev/corrosion');
+const { uvPath, createBareServer } = require('@titaniumnetwork-dev/ultraviolet');
+const { createServer } = require('http');
 const path = require('path');
+const { URL } = require('url');
+const bare = require('@tomphttp/bare-server-node');
 
 const app = express();
-const server = http.createServer(app);
+const PORT = process.env.PORT || 8080;
+const bareServer = createBareServer('/bare/');
 
-const proxy = new Corrosion({
-  codec: 'base64',
-  prefix: '/proxy/',
-  title: 'Loading...',
-  stripCSP: true,
-  requestOptions: { followRedirects: true }
+// Statische Dateien direkt aus aktuellem Verzeichnis
+app.use(express.static(__dirname));
+
+// Ultraviolet core-Dateien
+app.use('/uv/', express.static(uvPath));
+
+// Weiterleitung bei Service-Zugriff
+app.get('/service/', (req, res) => res.redirect('/'));
+
+// Server erstellen
+const server = createServer();
+
+server.on('request', (req, res) => {
+  const parsed = new URL(req.url, `http://${req.headers.host}`);
+  if (parsed.pathname.startsWith('/bare/')) {
+    bareServer.emit('request', req, res);
+  } else {
+    app(req, res);
+  }
 });
 
-// Statische Dateien (optional)
-app.use(express.static(path.join(__dirname, 'public')));
-
-// Nutze die Middleware
-app.use('/proxy/', proxy.middleware);
-
-// Optional: automatische Weiterleitung zur Zielseite
-app.get('/', (req, res) => {
-  res.send(`
-    <html>
-      <head>
-        <title>Weiterleitung...</title>
-        <meta http-equiv="refresh" content="3; url=/proxy/http://heckergames.rf.gd">
-        <style>
-          body {
-            margin: 0;
-            background: #000;
-            color: #fff;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            font-family: sans-serif;
-          }
-          .loader {
-            border: 16px solid #f3f3f3;
-            border-top: 16px solid #3498db;
-            border-radius: 50%;
-            width: 120px;
-            height: 120px;
-            animation: spin 2s linear infinite;
-          }
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        </style>
-      </head>
-      <body>
-        <div>
-          <div class="loader"></div>
-          <p>Leite weiter nach heckergames.rf.gd...</p>
-        </div>
-      </body>
-    </html>
-  `);
+server.on('upgrade', (req, socket, head) => {
+  const parsed = new URL(req.url, `http://${req.headers.host}`);
+  if (parsed.pathname.startsWith('/bare/')) {
+    bareServer.emit('upgrade', req, socket, head);
+  }
 });
 
-const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  console.log(`Server läuft auf Port ${PORT}`);
+  console.log(`✅ Ultraviolet Proxy läuft auf Port ${PORT}`);
 });
