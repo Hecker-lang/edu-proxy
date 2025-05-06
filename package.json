@@ -1,7 +1,6 @@
 {
   "name": "edu-proxy",
   "version": "1.0.0",
-  "description": "Ein einfacher Proxy zur Umgehung von Schulfiltern",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
