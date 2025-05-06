@@ -1,7 +1,7 @@
 {
   "name": "render-proxy",
   "version": "1.0.0",
-  "description": "Öffentlicher Game‑Proxy mit Corrosion, eingebetteter UI und Favicon",
+  "description": "Öffentlicher Game‑Proxy mit Corrosion, Fullscreen & Query‑Param",
   "main": "index.js",
   "engines": {
     "node": ">=18"
