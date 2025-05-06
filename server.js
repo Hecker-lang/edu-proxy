@@ -1,33 +1,49 @@
+// server.js
 const express = require("express");
 const http = require("http");
-const path = require("path");
-
-// Ersatz für UV oder Corrosion
 const { createProxyMiddleware } = require("http-proxy-middleware");
 
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-// Proxy-Endpunkt
-app.use('/proxy/', createProxyMiddleware({
-    target: 'https://amazon.de', // Zielseite, kann dynamisch gesetzt werden
+// 1) Proxy‑Endpunkt: leitet alle Anfragen unter /proxy/ an deine Website weiter
+app.use(
+  "/proxy/",
+  createProxyMiddleware({
+    target: "http://heckergames.rf.gd",  // deine Website
     changeOrigin: true,
     pathRewrite: {
-        '^/proxy/': '', // Entfernt "/proxy/" aus dem Pfad
+      "^/proxy/": "",                     // entfernt /proxy/ aus dem Pfad
     },
-}));
+    selfHandleResponse: true,             // für optionales HTML‑Rewriting
+    onProxyRes: (proxyRes, req, res) => {
+      let body = Buffer.from([]);
+      proxyRes.on("data", chunk => (body = Buffer.concat([body, chunk])));
+      proxyRes.on("end", () => {
+        // Beispiel: alle Links in der HTML-Antwort auf deinen Proxy umschreiben
+        let html = body.toString("utf8");
+        html = html.replace(
+          /href="https?:\/\/heckergames\.rf\.gd\/([^"]*)"/g,
+          `href="/proxy/$1"`
+        );
+        res.writeHead(proxyRes.statusCode, proxyRes.headers);
+        res.end(html);
+      });
+    },
+  })
+);
 
-// Automatische Weiterleitung zur Hauptseite (z. B. dein Game Launcher)
+// 2) Root‑Weiterleitung: Besucher landen direkt auf deiner Seite
 app.get("/", (req, res) => {
-    res.redirect("https://amazon.de"); // Hier deine Website eintragen
+  res.redirect("http://heckergames.rf.gd");
 });
 
-// Fallback (z. B. 404)
+// 3) Fallback für alle anderen Pfade
 app.use((req, res) => {
-    res.status(404).send("Nicht gefunden");
+  res.status(404).send("404 – Nicht gefunden");
 });
 
 // Server starten
 http.createServer(app).listen(PORT, () => {
-    console.log(`Proxy läuft auf Port ${PORT}`);
+  console.log(`Proxy-Server läuft auf Port ${PORT}`);
 });
