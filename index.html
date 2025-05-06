@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>Edu Proxy</title>
+</head>
+<body>
+  <h1>🌐 Edu Proxy mit Ultraviolet</h1>
+  <form id="proxy-form">
+    <input type="text" id="url" placeholder="https://example.com" />
+    <button type="submit">Starten</button>
+  </form>
+
+  <script src="/uv/uv.bundle.js"></script>
+  <script src="/uv/uv.config.js"></script>
+  <script>
+    document.getElementById('proxy-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      const input = document.getElementById('url').value;
+      window.location.href = __uv$config.prefix + __uv$config.encodeUrl(input);
+    });
+  </script>
+</body>
+</html>
