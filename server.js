@@ -10,7 +10,7 @@ const PORT = process.env.PORT || 8080;
 
 // Proxy-Endpunkt
 app.use('/proxy/', createProxyMiddleware({
-    target: 'https://example.com', // Zielseite, kann dynamisch gesetzt werden
+    target: 'https://amazon.de', // Zielseite, kann dynamisch gesetzt werden
     changeOrigin: true,
     pathRewrite: {
         '^/proxy/': '', // Entfernt "/proxy/" aus dem Pfad
