@@ -19,7 +19,7 @@ app.use('/proxy/', createProxyMiddleware({
 
 // Automatische Weiterleitung zur Hauptseite (z. B. dein Game Launcher)
 app.get("/", (req, res) => {
-    res.redirect("https://heckergames.rf.gd"); // Hier deine Website eintragen
+    res.redirect("https://amazon.de"); // Hier deine Website eintragen
 });
 
 // Fallback (z. B. 404)
