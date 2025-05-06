@@ -1,8 +1,19 @@
 const express   = require('express');
-const corrosion = require('@titaniumnetwork-dev/corrosion').default;
+const http      = require('http');
+const Corrosion = require('corrosion');      // Korrektes Paket
 const PORT      = process.env.PORT || 3000;
 
-const app = express();
+const app   = express();
+const proxy = new Corrosion({
+  prefix: '/proxy/',
+  stripCSP: true,
+  ws: true,
+  requestOptions: {
+    jar: true,
+    followRedirect: true,
+    maxRedirects: 10
+  }
+});
 
 // --- Logging aller Anfragen ---
 app.use((req, res, next) => {
@@ -10,22 +21,12 @@ app.use((req, res, next) => {
   next();
 });
 
-// --- Corrosion‑Proxy unter /proxy/ ---
-app.use(
-  '/proxy/',
-  corrosion({
-    prefix: '/proxy/',
-    stripCSP: true,
-    ws: true,
-    requestOptions: {
-      jar: true,
-      followRedirect: true,
-      maxRedirects: 10
-    }
-  })
-);
+// --- Proxy-Route für HTTP(S) ---
+app.use('/proxy/', (req, res) => {
+  proxy.request(req, res);
+});
 
-// --- Landing‑Page mit eingebetteter UI ---
+// --- Landing‑Page mit UI, Spinner & Favicon ---
 app.get('/', (req, res) => {
   res.send(`<!DOCTYPE html>
 <html lang="de">
@@ -79,9 +80,9 @@ app.get('/', (req, res) => {
     <small>© Game‑Proxy • öffentlich zugänglich</small>
   </footer>
   <script>
-    const form      = document.getElementById('proxyForm');
-    const frame     = document.getElementById('gameFrame');
-    const spinner   = document.getElementById('spinner');
+    const form    = document.getElementById('proxyForm');
+    const frame   = document.getElementById('gameFrame');
+    const spinner = document.getElementById('spinner');
     form.addEventListener('submit', e => {
       e.preventDefault();
       spinner.style.display = 'block';
@@ -113,7 +114,11 @@ app.use((err, req, res, next) => {
   res.status(500).send('500 – Interner Serverfehler');
 });
 
-// --- Server starten ---
-app.listen(PORT, () => {
+// --- HTTP‑Server mit WebSocket‑Upgrade für Corrosion ---
+const server = http.createServer(app);
+server.on('upgrade', (req, socket, head) => {
+  proxy.upgrade(req, socket, head);
+});
+server.listen(PORT, () => {
   console.log('Server läuft auf Port ' + PORT);
 });
