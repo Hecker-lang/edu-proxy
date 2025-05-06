@@ -1,32 +1,37 @@
 const express   = require('express');
 const http      = require('http');
-const Corrosion = require('corrosion');      // Korrektes Paket
+const Corrosion = require('corrosion');
 const PORT      = process.env.PORT || 3000;
 
 const app   = express();
 const proxy = new Corrosion({
-  prefix: '/proxy/',
   stripCSP: true,
   ws: true,
-  requestOptions: {
-    jar: true,
-    followRedirect: true,
-    maxRedirects: 10
-  }
+  requestOptions: { jar: true, followRedirect: true, maxRedirects: 10 }
 });
 
-// --- Logging aller Anfragen ---
+// Logging aller Anfragen
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} ${req.method} ${req.originalUrl}`);
   next();
 });
 
-// --- Proxy-Route für HTTP(S) ---
-app.use('/proxy/', (req, res) => {
+// Proxy über Query‑Parameter: /proxy?url=<Ziel‑URL>
+app.get('/proxy', (req, res) => {
+  let target = req.query.url;
+  if (!target) {
+    return res.status(400).send('Bitte URL angeben, z. B.: /proxy?url=https://example.com');
+  }
+  // Protokoll automatisch ergänzen, falls fehlt
+  if (!/^https?:\/\//i.test(target)) {
+    target = 'http://' + target;
+  }
+  // req.url auf die Ziel‑URL umbiegen
+  req.url = target;
   proxy.request(req, res);
 });
 
-// --- Landing‑Page mit UI, Spinner & Favicon ---
+// Landing‑Page mit Fullscreen‑Button, Spinner und Favicon
 app.get('/', (req, res) => {
   res.send(`<!DOCTYPE html>
 <html lang="de">
@@ -35,23 +40,23 @@ app.get('/', (req, res) => {
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Game‑Proxy</title>
   <!-- SVG‑Favicon 🎮 -->
-  <link rel="icon"
-        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ctext y='14' font-size='16'%3E%F0%9F%8E%AE%3C/text%3E%3C/svg%3E">
-  <!-- Bootstrap 5 CDN -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ctext y='14' font-size='16'%3E%F0%9F%8E%AE%3C/text%3E%3C/svg%3E">
+  <!-- Bootstrap 5 -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
         rel="stylesheet"
         integrity="sha384-ENjdO4Dr2bkBIFxQpeoEcBH7P3QjK7Sk+6Al6z9ZxkK/AdUQvQWZ5y5y5XtF1MZh"
         crossorigin="anonymous">
   <style>
-    body { display: flex; flex-direction: column; min-height: 100vh; }
-    header, footer { background: #343a40; color: #fff; padding: 1rem; }
-    main { flex: 1; padding: 1rem; }
-    #gameFrame { width: 100%; height: 75vh; border: 2px solid #dee2e6; border-radius: .25rem; display: none; }
-    #spinner { display: none; }
+    body { display:flex;flex-direction:column;min-height:100vh;margin:0; }
+    header,footer { background:#343a40;color:#fff;padding:1rem;text-align:center; }
+    main { flex:1;padding:1rem; }
+    #gameFrame { display:none;width:100%;height:100%;border:none; }
+    #spinner { display:none;margin:1rem auto;text-align:center; }
+    .fullscreen-container { position:relative;width:100%;height:75vh; }
   </style>
 </head>
 <body>
-  <header class="text-center">
+  <header>
     <h1 class="h3">🎮 Game‑Proxy</h1>
     <p class="mb-0">Spiele deine Lieblings‑Games direkt hier.</p>
   </header>
@@ -61,62 +66,67 @@ app.get('/', (req, res) => {
         <input type="url" id="targetUrl" class="form-control"
                placeholder="https://example.com/dein-game" required>
       </div>
-      <div class="col-sm-2">
-        <button type="submit" class="btn btn-primary w-100">Spiel laden</button>
+      <div class="col-sm-2 d-grid">
+        <button type="submit" class="btn btn-primary">Spiel & Vollbild</button>
       </div>
     </form>
-    <div id="spinner" class="text-center mb-3">
-      <div class="spinner-border" role="status">
-        <span class="visually-hidden">Lädt…</span>
-      </div>
+    <div id="spinner">
+      <div class="spinner-border" role="status"><span class="visually-hidden">Lädt…</span></div>
     </div>
-    <div id="gameContainer">
-      <iframe id="gameFrame"
-              sandbox="allow-scripts allow-same-origin allow-forms allow-popups">
-      </iframe>
+    <div class="fullscreen-container">
+      <iframe id="gameFrame" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
     </div>
   </main>
-  <footer class="text-center mt-auto">
+  <footer>
     <small>© Game‑Proxy • öffentlich zugänglich</small>
   </footer>
   <script>
     const form    = document.getElementById('proxyForm');
     const frame   = document.getElementById('gameFrame');
     const spinner = document.getElementById('spinner');
-    form.addEventListener('submit', e => {
+
+    form.addEventListener('submit', async e => {
       e.preventDefault();
+      // Fullscreen starten
+      await document.documentElement.requestFullscreen().catch(()=>{});
       spinner.style.display = 'block';
       frame.style.display   = 'none';
-      const url = document.getElementById('targetUrl').value;
-      frame.src = '/proxy/' + encodeURIComponent(url);
+      let url = document.getElementById('targetUrl').value;
+      frame.src = '/proxy?url=' + encodeURIComponent(url);
     });
+
     frame.addEventListener('load', () => {
       spinner.style.display = 'none';
       frame.style.display   = 'block';
     });
+
     frame.addEventListener('error', () => {
       spinner.style.display = 'none';
-      alert('Fehler beim Laden der Seite. Bitte überprüfe die URL.');
+      alert('Fehler beim Laden. Bitte URL prüfen.');
     });
   </script>
 </body>
 </html>`);
 });
 
-// --- 404‑Handler ---
-app.use((req, res) => {
-  res.status(404).send('404 – Seite nicht gefunden');
-});
+// 404‑Handler
+app.use((req, res) => res.status(404).send('404 – Seite nicht gefunden'));
 
-// --- Globales Error‑Handling ---
+// Globales Error‑Handling
 app.use((err, req, res, next) => {
   console.error(err);
   res.status(500).send('500 – Interner Serverfehler');
 });
 
-// --- HTTP‑Server mit WebSocket‑Upgrade für Corrosion ---
+// HTTP‑Server + WebSocket‑Upgrade
 const server = http.createServer(app);
 server.on('upgrade', (req, socket, head) => {
+  // Proxy‑in‑Proxy: Query‑Param auslesen
+  const urlObj = new URL(req.url, `http://${req.headers.host}`);
+  let target = urlObj.searchParams.get('url');
+  if (!target) return socket.destroy();
+  if (!/^https?:\/\//i.test(target)) target = 'http://' + target;
+  req.url = target;
   proxy.upgrade(req, socket, head);
 });
 server.listen(PORT, () => {
