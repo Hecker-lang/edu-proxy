@@ -1,13 +1,17 @@
 {
   "name": "render-proxy",
   "version": "1.0.0",
-  "description": "Öffentlicher Web‑Proxy für Render.com ohne eigene Domain/Subdomain",
+  "description": "Öffentlicher Game‑Proxy mit Corrosion, eingebetteter UI und Favicon",
   "main": "index.js",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
     "express": "^4.18.2",
-    "unblocker": "^2.3.1"
-  }
+    "@titaniumnetwork-dev/corrosion": "^2.0.0"
+  },
+  "license": "MIT"
 }
