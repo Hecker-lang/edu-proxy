@@ -1,26 +1,34 @@
 // server.js
-const express         = require("express");
-const helmet          = require("helmet");
-const compression     = require("compression");
-const morgan          = require("morgan");
-const rateLimit       = require("express-rate-limit");
-const apicache        = require("apicache");
-const basicAuth       = require("express-basic-auth");
-const { createProxyMiddleware } = require("http-proxy-middleware");
-const promClient      = require("prom-client");
-const fetch           = require("node-fetch");
-const zlib            = require("zlib");
-const replaceStream   = require("replacestream");
+require("dotenv").config();  // lädt Variablen aus .env, falls vorhanden
 
-const app   = express();
-const PORT  = process.env.PORT;
-const TARGET       = process.env.TARGET_URL || "http://heckergames.rf.gd";
-const LOAD_DELAY   = parseInt(process.env.LOAD_DELAY_MS,   10) || 3500;
-const PROXY_TIMEOUT= parseInt(process.env.PROXY_TIMEOUT_MS,10) || 10000;
+const express               = require("express");
+const helmet                = require("helmet");
+const compression           = require("compression");
+const morgan                = require("morgan");
+const rateLimit             = require("express-rate-limit");
+const apicache              = require("apicache");
+const basicAuth             = require("express-basic-auth");
+const { createProxyMiddleware } = require("http-proxy-middleware");
+const promClient            = require("prom-client");
+const fetch                 = require("node-fetch");
+const zlib                  = require("zlib");
+const replaceStream         = require("replacestream");
+
+const app       = express();
+const PORT      = process.env.PORT;
+const TARGET    = process.env.TARGET_URL      || "http://heckergames.rf.gd";
+const LOAD_DELAY= parseInt(process.env.LOAD_DELAY_MS,    10) || 3500;
+const PROXY_TIMEOUT = parseInt(process.env.PROXY_TIMEOUT_MS, 10) || 10000;
+const USER      = process.env.PROXY_USER;
+const PASS      = process.env.PROXY_PASS;
 
 // Pflicht‑Check
 if (!PORT) {
   console.error("❌ Kein PORT gesetzt – bitte auf Render deployen oder PORT in der Umgebung setzen.");
+  process.exit(1);
+}
+if (!USER || !PASS) {
+  console.error("❌ PROXY_USER und PROXY_PASS müssen als Umgebungsvariablen gesetzt sein.");
   process.exit(1);
 }
 
@@ -31,12 +39,11 @@ app.use(morgan("combined"));
 
 // ─── Rate Limiting & Caching ─────────────────────────────────────────────────
 app.use(rateLimit({ windowMs: 60*1000, max: 60, standardHeaders: true, legacyHeaders: false }));
-const cache = apicache.middleware;
-app.use(cache("5 minutes", (req, res) => res.statusCode === 200 && req.method === "GET"));
+app.use(apicache.middleware("5 minutes", (req, res) => res.statusCode === 200 && req.method === "GET"));
 
 // ─── Basic Auth ───────────────────────────────────────────────────────────────
 app.use(basicAuth({
-  users: { [process.env.PROXY_USER]: process.env.PROXY_PASS },
+  users: { [USER]: PASS },
   challenge: true,
   unauthorizedResponse: () => "401 – Unauthorisiert"
 }));
@@ -101,7 +108,7 @@ app.get("/", (req, res) => {
   `);
 });
 
-// ─── Proxy‑Endpoint mit Streaming‑Rewriting ────────────────────────────────────
+// ─── Proxy‑Endpoint with Streaming‑Rewriting ───────────────────────────────────
 app.use("/proxy", createProxyMiddleware({
   target: TARGET,
   changeOrigin: true,
@@ -111,33 +118,27 @@ app.use("/proxy", createProxyMiddleware({
   pathRewrite: { "^/proxy": "" },
   cookieDomainRewrite: { "*": "" },
   secure: false,
-  onProxyReq(proxyReq, req) {
+  onProxyReq(proxyReq) {
     proxyReq.setHeader("host", new URL(TARGET).host);
   },
   selfHandleResponse: true,
   onProxyRes: (proxyRes, req, res) => {
     const contentType = proxyRes.headers["content-type"] || "";
-    // Stream‑Rewriting nur für HTML
     if (contentType.includes("text/html")) {
       let stream = proxyRes;
       const enc = proxyRes.headers["content-encoding"];
-      // ggf. dekomprimieren
-      if (enc === "gzip")    stream = stream.pipe(zlib.createGunzip());
+      if (enc === "gzip")        stream = stream.pipe(zlib.createGunzip());
       else if (enc === "deflate") stream = stream.pipe(zlib.createInflate());
-      // Links im Stream ersetzen (TARGET → /proxy)
       stream = stream
-        .pipe(replaceStream(new RegExp(TARGET.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&"), "g"), ""))
+        .pipe(replaceStream(new RegExp(TARGET.replace(/[-/\\^$*+?.()|[\]{}]/g,"\\$&"),"g"),""))
         .pipe(replaceStream(/(href|src|action)=["']\//g, `$1="/proxy/`));
-      // ggf. wieder komprimieren
-      if (enc === "gzip")    stream = stream.pipe(zlib.createGzip());
+      if (enc === "gzip")        stream = stream.pipe(zlib.createGzip());
       else if (enc === "deflate") stream = stream.pipe(zlib.createDeflate());
-      // Header anpassen und streamen
       const headers = { ...proxyRes.headers };
       delete headers["content-length"];
       res.writeHead(proxyRes.statusCode, headers);
       stream.pipe(res);
     } else {
-      // Andere Inhalte 1:1 durchreichen
       res.writeHead(proxyRes.statusCode, proxyRes.headers);
       proxyRes.pipe(res);
     }
@@ -156,6 +157,6 @@ app.use("/proxy", createProxyMiddleware({
 app.use((req, res) => res.status(404).send("404 – Nicht gefunden"));
 
 // ─── Server starten ───────────────────────────────────────────────────────────
-app.listen(PORT, () => {
-  console.log(`✅ Proxy-Server läuft auf Port ${PORT}, target=${TARGET}`);
-});
+app.listen(PORT, () =>
+  console.log(`✅ Proxy-Server läuft auf Port ${PORT}, target=${TARGET}`)
+);
