@@ -9,6 +9,8 @@ const apicache              = require("apicache");
 const basicAuth             = require("express-basic-auth");
 const { createProxyMiddleware } = require("http-proxy-middleware");
 const promClient            = require("prom-client");
+const zlib                  = require("zlib");
+const replaceStream         = require("replacestream");
 
 const app       = express();
 const PORT      = process.env.PORT;
@@ -101,5 +103,5 @@ app.use((req, res) => res.status(404).send("404 – Nicht gefunden"));
 
 // Start
 app.listen(PORT, () => {
-  console.log(\`✅ Server läuft auf Port \${PORT}, proxy→\${TARGET}\`);
+  console.log("Server läuft auf Port " + PORT + ", proxy -> " + TARGET);
 });
