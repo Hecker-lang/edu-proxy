@@ -1,6 +1,8 @@
+// package.json
 {
   "name": "edu-proxy",
   "version": "1.0.0",
+  "description": "Einfacher Proxy mit Ladeanimation und Fehler-Handling",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
