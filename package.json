@@ -1,11 +1,8 @@
 {
   "name": "edu-proxy",
   "version": "1.3.1",
-  "description": "Einfile‑Proxy mit Auth, Metriken, Streaming‑Rewriting & Security‑Optimierungen",
   "main": "server.js",
-  "scripts": {
-    "start": "node server.js"
-  },
+  "scripts": { "start": "node server.js" },
   "dependencies": {
     "dotenv": "^16.0.3",
     "express": "^4.18.2",
@@ -14,10 +11,8 @@
     "apicache": "^1.6.3",
     "express-basic-auth": "^1.2.1",
     "prom-client": "^14.0.1",
-    "node-fetch": "^2.6.7",
     "helmet": "^7.0.0",
     "compression": "^1.7.4",
-    "morgan": "^1.10.0",
-    "replacestream": "^4.0.3"
+    "morgan": "^1.10.0"
   }
 }
