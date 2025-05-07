@@ -17,7 +17,6 @@
     "helmet": "^7.0.0",
     "compression": "^1.7.4",
     "morgan": "^1.10.0",
-    "replacestream": "^3.1.0",
-    "zlib": "builtin"
+    "replacestream": "^4.0.3"
   }
 }
